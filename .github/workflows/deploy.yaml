@@ -1,0 +1,29 @@
+name: Deploy
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Install and build
+        run: |
+          bun install
+          bun run build
+          zip -r dist.zip ./dist
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: WebpagePrinterHelper
+          path: dist.zip
