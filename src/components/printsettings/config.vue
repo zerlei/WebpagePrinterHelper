@@ -5,123 +5,44 @@ import {
     NSpace,
     NDataTable,
     useDialog,
-    NInput,
-NTag
 
 } from 'naive-ui'
 import { Add } from "@vicons/ionicons5";
-import { LogoRss } from "@vicons/ionicons5";
 import ServerNet from "../websocket"
 import { ref, onMounted, h } from 'vue'
 import configModal from './configModal.vue'
-const emit = defineEmits(['printerConfigUpdated'])
 const dialog = useDialog();
 const _configModal = ref(null)
 const tableData = ref([])
 const columns = [
-    { title: "名称", key: "Name" },
-    { title: "宽度mm", key: "PaperWidthInmm" },
-    { title: "高度mm", key: "PaperHeightInmm" },
-    { title: "边距👈mm", key: "LeftMargin" },
-    { title: "边距👆mm", key: "TopMargin" },
-    { title: "边距👉mm", key: "RightMargin" },
-    { title: "边距👇mm", key: "BottomMargin" },
-    { title: "打印机", key: "PrinterName" },
-    { title: "打印机纸张", key: "PaperName" },
-    { title: "打印方向", key: "Orientation" },
+    { title: "id", key: "id" },
+    { title: "名称", key: "name" },
+    { title: "宽度mm", key: "width_mm" },
+    { title: "高度mm", key: "height_mm" },
+    { title: "上边距mm", key: "top_margin" },
+    { title: "下边距mm", key: "bottom_margin" },
+    { title: "左边距mm", key: "left_margin" },
+    { title: "右边距mm", key: "right_margin" },
     {
-        title: "保存类型", key: "SaveType",width:350, render(row) {
-
-            if(['',null,undefined].includes(row.SaveType)) {
-                return row.SaveType
-            } else {
-                let arr = [
-
-                    h(
-                        NTag,
-                        {
-                            type:"success",
-                        },
-                        {
-                            default:()=>{
-                                if(row.SaveType[0] == "1") {
-                                    return "保存pdf"
-                                } else {
-                                    return "不保存pdf"
-                                }
-                            }
-                        }
-
-                    ),
-                    h(
-                        NTag,
-                        {
-                            type:"success",
-                        },
-                        {
-                            default:()=>{
-                                if(row.SaveType[1] == "1") {
-                                    return "保存png图片"
-                                } else {
-                                    return "不保存png图片"
-                                }
-                            }
-                        }
-
-                    ),
-                    h(
-                        NTag,
-                        {
-                            type:"success",
-                        },
-                        {
-                            default:()=>{
-                                if(row.SaveType[2] == "1") {
-                                    return "使用打印机"
-                                } else {
-                                    return "不使用打印机"
-                                }
-                            }
-                        }
-
-                    ),
-                    h(
-                        NTag,
-                        {
-                            type:"success",
-                        },
-                        {
-                            default:()=>{
-                                if(row.SaveType[3] == "1") {
-                                    return "使用打印机自定义配置"
-                                } else {
-                                    return "使用打印机默认配置"
-                                }
-                            }
-                        }
-
-                    ),
-
-
-                ]
-     
-
-                return h(
-                    NSpace,
-                    {
-                        size:'small'
-                    },
-                    {
-                        default:()=>arr
-                    }
-                    
-                )
-
-            }
-
+        title: "保存png图片", key: "is_save_png", render(row) {
+            return row.is_save_png == 1 ? "是" : "否"
         }
     },
-
+    {
+        title: "输出到打印机", key: "is_to_printer", render(row) {
+            return row.is_to_printer == 1 ? "是" : "否"
+        }
+    },
+    { title: "打印机名称", key: "printer_name" },
+    {
+        title: "使用打印机默认配置", key: "is_to_printer", render(row) {
+            return row.is_to_printer == 1 ? "是" : "否"
+        }
+    },
+    { title: "打印机纸张", key: "printer_paper_name" },
+    { title: "打印方向", key: "printer_orientation" },
+    { title: "最后执行命令", key: "process_at_end" },
+    { title: "最后执行命令参数", key: "process_argument_at_end" },
     {
         title: "操作", key: "op", width: "200", fixed: "right",
         render(row) {
@@ -149,11 +70,11 @@ const columns = [
                         onclick: () => {
                             dialog.warning({
                                 title: "删除",
-                                content: "不可恢复,确定删除吗？",
-                                positiveText: '我确定',
-                                negativeText: "我再想一下",
+                                content: "确定删除吗？",
+                                positiveText: '确定',
+                                negativeText: "等一下",
                                 onPositiveClick: () => {
-                                    delOnePrinterConfig(row.Id)
+                                    delOnePrinterConfig(row.id)
                                 }
 
                             })
@@ -168,16 +89,14 @@ const columns = [
     }
 ]
 
-const _webSocketUrl = ref(null)
 function add() {
     _configModal.value.showOrHide('add', {})
 }
 async function getPrinterConfigInfo() {
-    let res = await ServerNet.send({ MsgType: "GetPrintConfigs" })
-    if (res.IsSuccess) {
-        if (res.Result && res.Result.length > 0) {
-            tableData.value = res.Result
-            emit('printerConfigUpdated', res.Result)
+    let res = await ServerNet.send({ method: "get_all_configs" })
+    if (res.is_success) {
+        if (res.data && res.data.length > 0) {
+            tableData.value = res.data
             return
         }
     }
@@ -185,63 +104,31 @@ async function getPrinterConfigInfo() {
 }
 
 async function delOnePrinterConfig(Id) {
-    let res = await ServerNet.send({ MsgType: "DelOnePrintConfig", Data: Id })
-    if (res.IsSuccess) {
-        if (res.IsSuccess) {
-            dialog.success({
-                title: "删除",
-                content: "删除成功了！",
-                positiveText: '😒',
-
-            })
-            getPrinterConfigInfo()
-            return
-        } else {
-            dialog.error({
-                title: "删除失败了",
-                content: res.Message,
-                positiveText: '🤪',
-
-            })
-
-        }
-    }
-}
-async function InsertOrUpdateWebsocketUrl() {
-
-    let res = await ServerNet.send({ MsgType: "InsertOrUpdateWebsocketUrl", Data: _webSocketUrl.value })
-    if (res.IsSuccess) {
+    let res = await ServerNet.send({ method: "del_config", data: Id })
+    if (res.is_success) {
         dialog.success({
-            title: "成功",
-            content: "设置成功了！",
-            positiveText: '😀',
+            title: "删除",
+            content: "删除成功了！",
 
         })
-    }
-    else {
+        getPrinterConfigInfo()
+        return
+    } else {
         dialog.error({
-            title: "失败了~",
-            content: res.Message,
-            positiveText: '😢',
+            title: "删除失败了",
+            content: res.msg,
 
         })
+
     }
-
 }
-
 onMounted(async () => {
-
-
-    let res = await ServerNet.send({ MsgType: "GetPrintInfo" })
-    if (res.IsSuccess) {
-        _configModal.value.setPrintInfoData(res.Result)
+    let res = await ServerNet.send({ method: "get_printers_info" })
+    if (res.is_success) {
+        _configModal.value.setPrintInfoData(res.data)
     }
     getPrinterConfigInfo();
 
-    let res2 = await ServerNet.send({ MsgType: "GetWebsocketUrl" })
-    if (res2.IsSuccess) {
-        _webSocketUrl.value = res2.Result.WebSocUrl
-    }
 })
 
 
@@ -252,7 +139,7 @@ onMounted(async () => {
     </configModal>
 
     <h2>
-        1.3 打印配置
+        打印配置
     </h2>
     <n-space style="margin-top: 2vh;">
         <n-button type="info" v-on:click="add" style="margin-bottom: 1vh;">
@@ -263,18 +150,6 @@ onMounted(async () => {
         </n-button>
     </n-space>
     <n-data-table :columns="columns" :data="tableData" flex-height style="min-height: 600px;max-height: 600px;" />
-    <n-space style="margin-top: 20px;width: 100%;">
-        <n-button @click="InsertOrUpdateWebsocketUrl" type="info">
-            <template #icon>
-                <n-icon :size="20" :component="LogoRss"></n-icon>
-            </template>
-            远端websocket
-        </n-button>
-        <n-input v-model:value="_webSocketUrl" style="width: 450px;">
-
-        </n-input>
-
-    </n-space>
 </template>
 
 <style></style>
