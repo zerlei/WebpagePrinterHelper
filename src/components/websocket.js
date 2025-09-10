@@ -6,14 +6,13 @@ class Websoc {
   #uids;
   #websocketurl;
   //在这里打断点可能会导致debug错误，然后浏览器打不开页面， 这是为啥？
-  constructor(websoc_url) {
+  constructor() {
     //Id,method,callback
     this.#listener = [];
     //Id,resolve,time
     this.#sender = [];
     this.#senderTem = [];
     this.#uids = [];
-    this.#websocketurl = websoc_url;
     this.#websocket = null;
     setInterval(() => {
       let now = Date.now();
@@ -31,7 +30,7 @@ class Websoc {
         }
       }
     }, 120000);
-    this.createWebsocket();
+    // this.createWebsocket();
   }
   //   addListener(id, method, callback) {
   //     this.#listener.push({
@@ -40,6 +39,9 @@ class Websoc {
   //       callback: callback,
   //     });
   //   }
+  updateWebsocUrl(websoc_url) {
+    this.#websocketurl = websoc_url;
+  }
   createWebsocket() {
     this.#websocket = new WebSocket(this.#websocketurl);
     this.#websocket.onopen = (event) => {
@@ -100,7 +102,7 @@ class Websoc {
         time: Date.now(),
       });
 
-      if (this.#websocket.readyState == 1) {
+      if (this.#websocket != null && this.#websocket.readyState == 1) {
         this.#websocket.send(JSON.stringify(msg));
       } else {
         this.#senderTem.push(msg);
@@ -146,9 +148,10 @@ class Websoc {
   }
 }
 
-let ServerNet;
+let ServerNet = new Websoc();
 if (import.meta.env.MODE === "development") {
-  ServerNet = new Websoc(`ws://127.0.0.1:8846`);
+  ServerNet.updateWebsocUrl(`ws://127.0.0.1:8846`);
+  ServerNet.createWebsocket();
 } else {
   fetch("/command", {
     method: "POST",
@@ -162,7 +165,10 @@ if (import.meta.env.MODE === "development") {
   })
     .then((response) => response.json())
     .then((data) => {
-      ServerNet = new Websoc(`ws://${window.location.hostname}:${data.data}`);
+      ServerNet.updateWebsocUrl(
+        `ws://${window.location.hostname}:${data.data}`
+      );
+      ServerNet.createWebsocket();
     });
 }
 
