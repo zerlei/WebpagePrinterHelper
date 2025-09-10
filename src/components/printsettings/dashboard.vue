@@ -8,26 +8,20 @@ import {
 } from 'naive-ui'
 import ServerNet from '../websocket'
 import { ref, onMounted, h } from 'vue'
-import { PlugConnected24Filled, PlugDisconnected24Filled } from "@vicons/fluent"
-const _server_websoc_connected_ = ref(true)
-const _websoc_url = ref("")
 
 const tableData = ref([])
 const columns = [
-    { title: "页面地址", key: "PageName" },
-    { title: "打印时间", key: "PrintTime" },
-    { title: "请求IP", key: "FromIp" },
-    { title: "请求类型", key: "FromType" },
-    { title: "打印机配置名称", key: "ConfigName" },
-    { title: "打印模式", key: "PrintMode" },
-    {
-        title: "是否成功", key: "IsSuccess", render(row) {
-            if (row.IsSuccess) {
-                return "😀成功"
-            }
-            return "🤪失败"
-        }
-    }
+    { title: "id", key: "id" },
+    { title: "页面地址", key: "page_url" },
+    { title: "打印时间", key: "time" },
+    { title: "来源", key: "from_ip" },
+    { title: "打印发生方式", key: "page_loaded_or_js_request" },
+    { title: "打印配置id", key: "config_id" },
+    { title: "文件路径", key: "page_file_path" },
+    { title: "状态", key: "status" },
+    { title: "命令结果", key: "end_cmd_exec_status" },
+    { title: "命令消息", key: "end_cmd_exec_message" },
+    { title: "错误信息", key: "error_message" },
 ]
 const loading = ref(true)
 const pagination = ref({
@@ -57,67 +51,24 @@ function pageChanged(currentPage) {
     }
 }
 async function getPrintedPage(currentPage) {
-    let res = await ServerNet.send({ MsgType: "GetPrintedPages", Data: { Size: 20, Page: currentPage } })
-    tableData.value = res.Result.Rows == null ? [] : res.Result.Rows
+    let res = await ServerNet.send({ method: "get_pages_desc",page_size: 20, page_index: currentPage  })
+    tableData.value = res.data == null ? [] : res.data
 
     pagination.value.page = currentPage
-    pagination.value.pageCount = (res.Result.Count / 20).toFixed(0) + 1
-    pagination.value.itemCount = res.Result.Count
+    pagination.value.pageCount = (res.count / 20).toFixed(0) + 1
+    pagination.value.itemCount = res.count
     loading.value = false
 }
 onMounted(async () => {
+
     getPrintedPage(1)
-
-    let res = await ServerNet.send({ MsgType: "GetWebsocketUrl" })
-    if (res.IsSuccess) {
-        _server_websoc_connected_.value = res.Result.IsConnected
-        _websoc_url.value = res.Result.WebSocUrl
-    }
-    ServerNet.listen("dashboard", "WebSocState", (data) => {
-        _server_websoc_connected_.value = data.WebsocConnected
-        _websoc_url.value = data.WebSocUrl
-    }
-    )
-
-    ServerNet.listen("dashboard", "PrintPageChanged", (data) => {
-        getPrintedPage(pagination.value.page)
-    }
-    )
 })
 
 </script>
 
 <template>
     <h2>
-        1.1 连接服务端websocet
-    </h2>
-    <!-- <n-tooltip trigger="hover">
-            <template #trigger> -->
-    <n-space style="margin-left: 50px;">
-        <div>
-            <n-tooltip trigger="hover" v-if="_server_websoc_connected_">
-                <template #trigger>
-                    <n-icon size="80" color="#2ADD9C">
-                        <PlugConnected24Filled />
-                    </n-icon>
-                </template>
-                已连接！👌
-            </n-tooltip>
-            <n-tooltip trigger="hover" v-else>
-                <template #trigger>
-                    <n-icon size="80" color="#BE002F">
-                        <PlugDisconnected24Filled />
-                    </n-icon>
-                </template>
-                还没有连接...🦉
-            </n-tooltip>
-        </div>
-        <div style="font-size: 40px; color: aquamarine;">
-            {{_websoc_url}}
-        </div>
-    </n-space>
-    <h2>
-        1.2 打印页面信息
+        打印页面信息
     </h2>
     <n-data-table :columns="columns" remote :data="tableData" :loading="loading" striped flex-height
         style="min-height: 600px;max-height: 600px;" :pagination="pagination" v-on:update:page="pageChanged" />
