@@ -1,9 +1,8 @@
 name: Deploy
 on:
   push:
-    branches:
-      - master
-
+    tags:
+      - 'v*'   # 只有推送 tag 时才触发，适合发布版本
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
@@ -22,8 +21,10 @@ jobs:
           bun install
           bun run build
           zip -r dist.zip ./dist
-      - name: Upload build
-        uses: actions/upload-artifact@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
         with:
-          name: WebpagePrinterHelper
-          path: dist.zip
+          files: dist.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
